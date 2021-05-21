@@ -11,7 +11,6 @@ from nltk.tokenize import sent_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk import word_tokenize
 import pickle
-from sklearn.externals import joblib
 
 app = Flask(__name__)
 
@@ -43,7 +42,8 @@ def predict():
 
     #TFIDF
     corpus = df_x
-    X = TfidfVectorizer(min_df=1, stop_words='english').fit_transform(corpus)
+    cv = TfidfVectorizer(min_df=1, stop_words='english')
+    X = cv.fit_transform(corpus)
 
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X, df_y, test_size=0.33, random_state=42)
@@ -55,21 +55,15 @@ def predict():
     LR_model = LogisticRegression(solver='liblinear')
     LR_model.fit(X_train, y_train)
 
-    from sklearn.metrics import accuracy_score as ac
-
-    pred = LR_model.predict(X_test)
-    ac(y_test, pred)
-
     # Save Model
-    joblib.dump(LR_model, 'model.pkl')
-    print("Model dumped!")
+    pickle.dump(LR_model, open('model.pkl', 'wb'))
 
     # ytb_model = open('spam_model.pkl', 'rb')
-    clf = joblib.load('model.pkl')
+    clf = pickle.load(open('model.pkl', 'rb'))
     if request.method == 'POST':
         comment = request.form['comment']
         data = [comment]
-        vect = X.transform(data).toarray()
+        vect = cv.transform(data).toarray()
         my_prediction = clf.predict(vect)
     return render_template('result.html', prediction=my_prediction)
 
